@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for initium.
 GH_REPO="https://github.com/nearform/initium-cli"
 TOOL_NAME="initium"
 TOOL_TEST="initium --help"
@@ -31,8 +30,6 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if initium has other means of determining installable versions.
 	list_github_tags
 }
 
@@ -41,8 +38,7 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for initium
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	url="$(get_download_url "$version" "$GH_REPO")"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -61,7 +57,6 @@ install_version() {
 		mkdir -p "$install_path"
 		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-		# TODO: Assert initium executable exists.
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
@@ -71,4 +66,72 @@ install_version() {
 		rm -rf "$install_path"
 		fail "An error occurred while installing $TOOL_NAME $version."
 	)
+}
+
+get_download_url() {
+	local version
+	version="$1"
+	local repo
+	repo=$2
+	local arch
+	arch="$(get_arch)"
+	local platform
+	platform="$(get_platform)"
+	local ext
+	ext="$(get_ext)"
+	echo "${repo}/releases/download/v${version}/initium-cli_${platform}_${arch}.${ext}"
+}
+
+get_arch() {
+	arch=$(uname -m | tr '[:upper:]' '[:lower:]')
+	case ${arch} in
+	arm64)
+		arch='arm64'
+		;;
+	arm6)
+		arch='arm6'
+		;;
+	x86_64)
+		arch='x86_64'
+		;;
+	aarch64)
+		arch='arm64'
+		;;
+	i386)
+		arch='i386'
+		;;
+	esac
+
+	echo "${arch}"
+}
+
+get_platform() {
+	plat=$(uname | tr '[:upper:]' '[:lower:]')
+	case ${plat} in
+	darwin)
+		plat='Darwin'
+		;;
+	linux)
+		plat='Linux'
+		;;
+	windows)
+		plat='Windows'
+		;;
+	esac
+
+	echo "${plat}"
+}
+
+get_ext() {
+	plat=$(uname | tr '[:upper:]' '[:lower:]')
+	case ${plat} in
+	windows)
+		ext='zip'
+		;;
+	*)
+		ext='tar.gz'
+		;;
+	esac
+
+	echo "${ext}"
 }
